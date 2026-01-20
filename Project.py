@@ -108,7 +108,7 @@ marioPhoto = ImageTk.PhotoImage(Image.open('mario_sprite.png').resize((100, 100)
 marioPhotoFlipped = ImageTk.PhotoImage(Image.open('mario_sprite.png').resize((100, 100)).transpose(Image.FLIP_LEFT_RIGHT))
 mario = canvas.create_image(screenWidth // 2, screenHeight // 2 + 145, image=marioPhoto)
 
-#Управление
+#Управление клавишами
 window.bind('<KeyPress>', getPressedKeys)
 window.bind('<KeyRelease>', getReleasedKeys)
 window.bind('<Escape>', exit)
