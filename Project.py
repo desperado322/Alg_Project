@@ -78,6 +78,7 @@ def updateJump(currentY):
         isJumping = False
     canvas.coords(mario, canvas.coords(mario)[0], currentY)
 
+#Глобальные переменные
 process = None
 isJumping = False
 isMoving = False
