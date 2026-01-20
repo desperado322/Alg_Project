@@ -112,5 +112,7 @@ mario = canvas.create_image(screenWidth // 2, screenHeight // 2 + 145, image=mar
 window.bind('<KeyPress>', getPressedKeys)
 window.bind('<KeyRelease>', getReleasedKeys)
 window.bind('<Escape>', exit)
+for i in range(11):
+    print(11111)
 
 window.mainloop()
