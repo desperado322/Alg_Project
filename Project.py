@@ -91,7 +91,7 @@ pressedKeys = set()
 keys = ['a', 'd', 'space']
 count = 0
 
-#Создание окна
+#Создание окна приложения
 window = Tk()
 screenWidth = window.winfo_screenwidth()
 screenHeight = window.winfo_screenheight()
