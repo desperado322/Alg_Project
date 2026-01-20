@@ -4,9 +4,11 @@ from PIL import Image, ImageTk
 def getPressedKeys(event):
     '''Получение нажатых кнопок'''
     global pressedKeys
-    pressedKeys.add(event.keysym)
+    if event.keysym in keys:
+        pressedKeys.add(event.keysym)
+    print(pressedKeys)
     if event.keysym == 'a' or event.keysym == 'd':
-        if not isMoving:
+        if not isMoving and directionX == 0:
             startMove()
 
 def getReleasedKeys(event):
@@ -19,28 +21,6 @@ def getReleasedKeys(event):
         directionX = 0
     pressedKeys.discard(event.keysym)
 
-def move():
-    '''Передвижение на a/d'''
-    global directionX
-    if isMoving:
-        currentX = canvas.coords(mario)[0]
-        if 'a' in pressedKeys:
-            canvas.itemconfig(mario, image=marioPhotoFlipped)
-            directionX = -1
-        elif 'd' in pressedKeys:
-            canvas.itemconfig(mario, image=marioPhoto)
-            directionX = 1
-        updateMove(directionX, currentX)
-        window.after(16, move)
-def jump():
-    '''Прыжок'''
-    global targetY
-    global velocity
-    if isJumping:
-        currentY = canvas.coords(mario)[1]
-        updateJump(currentY)
-        window.after(16, jump)
-        
 def startMove():
     global isMoving       
     isMoving = True
@@ -53,13 +33,38 @@ def startJump():
     velocity = -30
     jump()
 
+def move():
+    '''Передвижение на a/d'''
+    global directionX, pressedKeys, process
+    currentX = canvas.coords(mario)[0]
+    if 'a' in pressedKeys:
+        canvas.itemconfig(mario, image=marioPhotoFlipped)
+        directionX = -1
+    elif 'd' in pressedKeys:
+        canvas.itemconfig(mario, image=marioPhoto)
+        directionX = 1
+    updateMove(directionX, currentX)
+    if directionX != 0:
+        process = window.after(16, move)
+def jump():
+    '''Прыжок'''
+    global targetY
+    global velocity
+    if isJumping:
+        currentY = canvas.coords(mario)[1]
+        updateJump(currentY)
+        window.after(16, jump)
+        
+
 def updateMove(directionX, currentX):
     '''Анимация передвижения'''
-    global isMoving
+    global count, isMoving, process
     currentX += directionX * 8 
     if directionX == 0:
         isMoving = False
+        window.after_cancel(process)
     canvas.coords(mario, currentX, canvas.coords(mario)[1])
+    count += 1
     
 def updateJump(currentY):
     '''Анимация прыжка'''
@@ -73,6 +78,7 @@ def updateJump(currentY):
         isJumping = False
     canvas.coords(mario, canvas.coords(mario)[0], currentY)
 
+process = None
 isJumping = False
 isMoving = False
 isOnGround = True
@@ -81,6 +87,8 @@ gravity = 200
 directionX = 0
 targetY = 0
 pressedKeys = set()
+keys = ['a', 'd', 'space']
+count = 0
 
 #Создание окна
 window = Tk()
