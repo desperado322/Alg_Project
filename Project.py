@@ -107,30 +107,38 @@ def updateJump(currentY):
 def checkCoords():
     '''Проверка координат персонажа на коллизии'''
     global velocity, speed, processOfMoving, processOfCheckCoords, isOnground, isOnTube
-    currentCoords = canvas.coords(mario)
+    currentCoords = convertCoords(canvas.coords(mario), [90, 90])
+    mushroomCoords = convertCoords(canvas.coords(coordsOfObjects[3][0]), [90, 90])
+    turtleCoords = convertCoords(canvas.coords(coordsOfObjects[4][0]), [90, 90])
+
     #Координаты бездн
     leftSideOfAbyss1 = coordsOfObjects[2][1][0]
     rightSideOfAbyss1 = coordsOfObjects[2][1][2]
-    centerOfAbyss1 = (leftSideOfAbyss1 + rightSideOfAbyss1) // 2  
-    if currentCoords[0] > window.winfo_screenwidth():   #Проверка на правую границу экрана
+    centerOfAbyss1 = (leftSideOfAbyss1 + rightSideOfAbyss1) // 2
+    if mushroomCoords and overlaps(*currentCoords, *mushroomCoords) and canvas.itemcget(coordsOfObjects[3][0], "state") != 'hidden':
+        if currentCoords[3] - 5 <= mushroomCoords[1] and velocity > 0:
+            canvas.itemconfig(coordsOfObjects[3][0], state='hidden')
+        else:
+            gameOver()
+    if canvas.coords(mario)[0] > window.winfo_screenwidth():   #Проверка на правую границу экрана
         canvas.coords(mario, 30, canvas.coords(mario)[1])
         resetEnvironment()
-    if currentCoords[0] < 30:   #Проверка на левую границу экрана
+    if canvas.coords(mario)[0] < 30:   #Проверка на левую границу экрана
         canvas.coords(mario, 30, canvas.coords(mario)[1])
-    if abs(currentCoords[0] - centerOfAbyss1) < (centerOfAbyss1 - leftSideOfAbyss1) / 2 and currentCoords[1] > 690:  #Проверка на бездну
-        if currentCoords[1] > 700:
+    if abs(canvas.coords(mario)[0] - centerOfAbyss1) < (centerOfAbyss1 - leftSideOfAbyss1) / 2 and canvas.coords(mario)[1] > 690:  #Проверка на бездну
+        if canvas.coords(mario)[1] > 700:
             speed = 0
         falling()
-        if currentCoords[1] > screenHeight:
+        if canvas.coords(mario)[1] > screenHeight:
             window.destroy()
     for i in range(2):   #Проверка на столкновение с трубами
-        if abs(coordsOfObjects[i][1][0] - currentCoords[0]) < 100 and abs(coordsOfObjects[i][1][0] - currentCoords[0]) > 75  and abs(coordsOfObjects[i][1][1] - currentCoords[1]) < 70:
-            canvas.coords(mario, (coordsOfObjects[i][1][0] + (currentCoords[0] - coordsOfObjects[i][1][0]) - 15 * directionX), currentCoords[1])
-        elif abs(coordsOfObjects[i][1][0] - currentCoords[0]) < 34 and abs(coordsOfObjects[i][1][1] - currentCoords[1]) < 70:
-            canvas.coords(mario, coordsOfObjects[i][1][0], currentCoords[1])
+        if abs(coordsOfObjects[i][1][0] - canvas.coords(mario)[0]) < 100 and abs(coordsOfObjects[i][1][0] - canvas.coords(mario)[0]) > 75  and abs(coordsOfObjects[i][1][1] - canvas.coords(mario)[1]) < 70:
+            canvas.coords(mario, (coordsOfObjects[i][1][0] + (canvas.coords(mario)[0] - coordsOfObjects[i][1][0]) - 15 * directionX), canvas.coords(mario)[1])
+        elif abs(coordsOfObjects[i][1][0] - canvas.coords(mario)[0]) < 34 and abs(coordsOfObjects[i][1][1] - canvas.coords(mario)[1]) < 70:
+            canvas.coords(mario, coordsOfObjects[i][1][0], canvas.coords(mario)[1])
     if countOfLocations == 6:
         window.after_cancel(processOfMoving)
-        if abs(currentCoords[0] - 1800) < 50:
+        if abs(canvas.coords(mario)[0] - 1800) < 50:
             winLabel = Label(canvas, text='Вы выиграли!', font=('Arial', 100), bg='lightblue')
             winLabel.place(x=screenWidth // 2 - 400, y=screenHeight // 2 - 200)
             window.after_cancel(processOfCheckCoords)
@@ -251,6 +259,33 @@ def setVolume(value):
     volume = value / 1000
     mixer.music.set_volume(volume)
 
+def overlaps(playerLeft, playerTop, playerRight, playerBottom, objectLeft, objectTop, objectRight, objectBottom):
+    horizontal = (playerLeft < objectRight) and (playerRight > objectLeft)
+    vertical = (playerTop > objectBottom) and (playerBottom < objectTop)
+    return horizontal and vertical
+
+def convertCoords(objectCoords, objectsSprites):
+    '''Конвертер координат'''
+    objectWidth, objectHeight = objectsSprites
+    # Преобразуем объект в bbox [x1, y1, x2, y2]
+    cx, cy = objectCoords
+    object_x1 = cx - objectWidth // 2
+    object_y1 = cy - objectHeight // 2
+    object_x2 = cx + objectWidth // 2
+    object_y2 = cy + objectHeight // 2
+    objectCoords = [object_x1, object_y2, object_x2, object_y1]
+    return objectCoords
+
+def gameOver():
+    global frame
+    for widget in frame.winfo_children():
+        widget.destroy()
+    gameOverLabel = Label(frame, text='Вы проиграли', font=('Arial', 30), width=20, bg='lightblue')
+    gameOverLabel.pack(side='top')
+    restartButton = Button(frame, text='Рестарт', font=('Arial', 30), width=20)
+    restartButton.pack(side='top', pady=10)
+    frame.place(x=screenWidth // 2 - 280, y=screenHeight // 2 - 200)
+
 mixer.init()
 
 #Глобальные переменные
@@ -298,17 +333,17 @@ mixer.music.play()
 mixer.music.set_volume(volume)
 
 #Создание персонажа
-marioPhoto = ImageTk.PhotoImage(Image.open('mario_sprite.png').resize((170, 170)))
-marioPhotoFlipped = ImageTk.PhotoImage(Image.open('mario_sprite.png').resize((170, 170)).transpose(Image.FLIP_LEFT_RIGHT))
-marioJumpPhoto = ImageTk.PhotoImage(Image.open('mario_jump.png').resize((170, 170)))
-marioJumpPhotoFlipped = ImageTk.PhotoImage(Image.open('mario_jump.png').resize((170, 170)).transpose(Image.FLIP_LEFT_RIGHT))
-marioRunAnimationPhoto1 = ImageTk.PhotoImage(Image.open('mario_run_animation_1.png').resize((170, 170)))
-marioRunAnimationPhoto1Flipped = ImageTk.PhotoImage(Image.open('mario_run_animation_1.png').resize((170, 170)).transpose(Image.FLIP_LEFT_RIGHT))
-marioRunAnimationPhoto2 = ImageTk.PhotoImage(Image.open('mario_run_animation_2.png').resize((170, 170)))
-marioRunAnimationPhoto2Flipped = ImageTk.PhotoImage(Image.open('mario_run_animation_2.png').resize((170, 170)).transpose(Image.FLIP_LEFT_RIGHT))
-marioRunAnimationPhoto3 = ImageTk.PhotoImage(Image.open('mario_run_animation_3.png').resize((170, 170)))
-marioRunAnimationPhoto3Flipped = ImageTk.PhotoImage(Image.open('mario_run_animation_3.png').resize((170, 170)).transpose(Image.FLIP_LEFT_RIGHT))
-mario = canvas.create_image(30, screenHeight // 2 + 153, image=marioPhoto)
+marioPhoto = ImageTk.PhotoImage(Image.open('mario_sprite.png').resize((90, 90)))
+marioPhotoFlipped = ImageTk.PhotoImage(Image.open('mario_sprite.png').resize((90, 90)).transpose(Image.FLIP_LEFT_RIGHT))
+marioJumpPhoto = ImageTk.PhotoImage(Image.open('mario_jump.png').resize((90, 90)))
+marioJumpPhotoFlipped = ImageTk.PhotoImage(Image.open('mario_jump.png').resize((90, 90)).transpose(Image.FLIP_LEFT_RIGHT))
+marioRunAnimationPhoto1 = ImageTk.PhotoImage(Image.open('mario_run_animation_1.png').resize((90, 90)))
+marioRunAnimationPhoto1Flipped = ImageTk.PhotoImage(Image.open('mario_run_animation_1.png').resize((90, 90)).transpose(Image.FLIP_LEFT_RIGHT))
+marioRunAnimationPhoto2 = ImageTk.PhotoImage(Image.open('mario_run_animation_2.png').resize((90, 90)))
+marioRunAnimationPhoto2Flipped = ImageTk.PhotoImage(Image.open('mario_run_animation_2.png').resize((90, 90)).transpose(Image.FLIP_LEFT_RIGHT))
+marioRunAnimationPhoto3 = ImageTk.PhotoImage(Image.open('mario_run_animation_3.png').resize((90, 90)))
+marioRunAnimationPhoto3Flipped = ImageTk.PhotoImage(Image.open('mario_run_animation_3.png').resize((90, 90)).transpose(Image.FLIP_LEFT_RIGHT))
+mario = canvas.create_image(30, 693, image=marioPhoto)
 canvas.tag_raise(mario)
 
 #Создание объектов окружения
@@ -325,8 +360,8 @@ canvas.tag_raise(ground)
 createAbysses()
 
 #Создание врагов
-mushroomPhoto = ImageTk.PhotoImage(Image.open('mushroom.png').resize((170, 170)))
-turtlePhoto = ImageTk.PhotoImage(Image.open('turtle.png').resize((170, 170)).transpose(Image.FLIP_LEFT_RIGHT))
+mushroomPhoto = ImageTk.PhotoImage(Image.open('mushroom.png').resize((90, 90)))
+turtlePhoto = ImageTk.PhotoImage(Image.open('turtle.png').resize((90, 90)).transpose(Image.FLIP_LEFT_RIGHT))
 createEnemies()
 
 #Отрисовка поверх других объектов
