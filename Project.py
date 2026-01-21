@@ -130,26 +130,15 @@ def checkCoords():
 def resetEnvironment():
     '''Обновление окружения при выходе за границы экрана'''
     global coordsOfObjects
-    for i in range(2):   #Создание новых препятствий
-        tube = canvas.create_image(random.randrange(700, 1700, 300), screenHeight // 2 + 153, image=tubePhoto)
+    for i in range(3):   #Удаление старых объектов
         canvas.delete(coordsOfObjects[0][0])
         coordsOfObjects.pop(0)
-        coordsOfObjects.append([tube, canvas.coords(tube)])
-        canvas.tag_raise(tube, mario)
-
+    createTubes() #Создание новых препятствий
     canvas.tag_raise(ground)
-
-    for i in range(1):   #Создание бездн
-        positionX0 = random.randrange(500, 1700, 700)
-        if all(abs(positionX0 - coordsOfObjects[i][1][0]) > 200 for i in range(2)):
-            position = [positionX0, screenHeight // 2 + 195, positionX0 + random.randint(100, 200), screenHeight]
-            abyss = canvas.create_rectangle(position, fill='lightblue', outline='')
-            canvas.delete(coordsOfObjects[0][0])
-            coordsOfObjects.pop(0)
-            coordsOfObjects.append([abyss, canvas.coords(abyss)])
-
+    createAbysses() #Создание бездн
+        
+    canvas.tag_raise(mario, coordsOfObjects[-1][0])
     canvas.tag_lower(groundLine)
-    canvas.tag_raise(mario, abyss)
     for i in range(2):
         canvas.tag_raise(coordsOfObjects[i][0], mario)
 
@@ -157,16 +146,22 @@ def movingOfEnemies():
     pass
 
 def createAbysses():
-    global coordsOfObjects, abyss
-    for i in range(20):   
-        positionX0 = random.randrange(500, 1700, 200)
-        if len(coordsOfObjects) < 3:
-            if all(abs(positionX0 - coordsOfObjects[i][1][0]) > 200 for i in range(2)):
-                position = [positionX0, screenHeight // 2 + 195, positionX0 + random.randint(100, 200), screenHeight]
-                abyss = canvas.create_rectangle(position, fill='lightblue', outline='')
-                coordsOfObjects.append([abyss, canvas.coords(abyss)])
-        else:
-            break
+    '''Создание бездн'''
+    global coordsOfObjects
+    positionX0 = random.randrange(500, 1700, 50)
+    if all(abs(positionX0 - coordsOfObjects[i][1][0]) > 200 for i in range(2)):
+        position = [positionX0, screenHeight // 2 + 195, positionX0 + random.randint(100, 200), screenHeight]
+        abyss = canvas.create_rectangle(position, fill='lightblue', outline='')
+        coordsOfObjects.append([abyss, canvas.coords(abyss)])
+    else:
+        createAbysses()
+def createTubes():
+    '''Создание препятствий'''
+    global coordsOfObjects
+    for i in range(2):
+        tube = canvas.create_image(random.randrange(700, 1700, 300), screenHeight // 2 + 153, image=tubePhoto)
+        coordsOfObjects.append([tube, canvas.coords(tube)])
+        canvas.tag_raise(tube, mario)
 
 #Глобальные переменные
 process = None
@@ -211,18 +206,11 @@ tubePhoto = ImageTk.PhotoImage(Image.open('tube.png').resize((1300, 600)))
 groundLine = canvas.create_line(0, screenHeight // 2 + 200, screenWidth, screenHeight // 2 + 200, fill='black', width=8)
 ground = canvas.create_image(screenWidth / 2, 990, image=groundPhoto)
 coordsOfObjects = []
-for i in range(2):
-    tube = canvas.create_image(random.randrange(700, 1700, 300), screenHeight // 2 + 153, image=tubePhoto)
-    coordsOfObjects.append([tube, canvas.coords(tube)])
-    canvas.tag_raise(tube, mario)
+createTubes()
 
 canvas.tag_raise(ground)
 
-for i in range(10):
-    try:
-        createAbysses()
-    except NameError:
-        createAbysses()
+createAbysses()
 
 #Создание врагов
 '''mushroomPhoto = ImageTk.PhotoImage(Image.open('mushroom.png').resize((170, 170)))
@@ -232,8 +220,8 @@ for i in range(2):
     coordsOfEnemies.append([mushroom, canvas.coords(mushroom)])'''
 
 #Отрисовка поверх других объектов
+canvas.tag_raise(mario, coordsOfObjects[-1][0])
 canvas.tag_lower(groundLine)
-canvas.tag_raise(mario, abyss)
 for i in range(2):
     canvas.tag_raise(coordsOfObjects[i][0], mario)
 
