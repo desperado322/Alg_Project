@@ -1,7 +1,7 @@
 from tkinter import *
 from PIL import Image, ImageTk
+from pygame import mixer
 import random
-import sys, os
 
 def getPressedKeys(event):
     '''Получение нажатых кнопок'''
@@ -106,7 +106,7 @@ def updateJump(currentY):
 
 def checkCoords():
     '''Проверка координат персонажа на коллизии'''
-    global velocity, keys, pressedKeys, directionX, processOfMoving, processOfCheckCoords
+    global velocity, speed, processOfMoving, processOfCheckCoords
     currentCoords = canvas.coords(mario)
     #Координаты бездн
     leftSideOfAbyss1 = coordsOfObjects[2][1][0]
@@ -120,15 +120,13 @@ def checkCoords():
         canvas.coords(mario, 30, canvas.coords(mario)[1])
     if abs(currentCoords[0] - centerOfAbyss1) < (centerOfAbyss1 - leftSideOfAbyss1) / 2 and currentCoords[1] > 690:  #Проверка на бездну
         if currentCoords[1] > 700:
-            keys.clear()
-            pressedKeys.clear()
-            directionX = 0
+            speed = 0
         velocity += gravity * 0.016
         canvas.coords(mario, canvas.coords(mario)[0], canvas.coords(mario)[1] + velocity)
         if currentCoords[1] > screenHeight:
             window.destroy()
     for i in range(2):   #Проверка на столкновение с трубами
-        if abs(coordsOfObjects[i][1][0] - currentCoords[0]) < 100 and abs(coordsOfObjects[i][1][1] - currentCoords[1]) < 70:
+        if abs(coordsOfObjects[i][1][0] - currentCoords[0]) < 100 and abs(coordsOfObjects[i][1][0] - currentCoords[0]) > 90  and abs(coordsOfObjects[i][1][1] - currentCoords[1]) < 70:
             canvas.coords(mario, (coordsOfObjects[i][1][0] + (currentCoords[0] - coordsOfObjects[i][1][0]) - 15 * directionX), currentCoords[1])
     if countOfLocations == 6:
         window.after_cancel(processOfMoving)
@@ -136,9 +134,7 @@ def checkCoords():
             winLabel = Label(canvas, text='Вы выиграли!', font=('Arial', 100), bg='lightblue')
             winLabel.place(x=screenWidth // 2 - 400, y=screenHeight // 2 - 200)
             window.after_cancel(processOfCheckCoords)
-            keys.clear()
-            pressedKeys.clear()
-            directionX = 0
+            speed = 0
     processOfCheckCoords = window.after(16, checkCoords)
 
 def resetEnvironment():
@@ -187,6 +183,11 @@ def createEnemies():
     turtle = canvas.create_image(random.randint(1800, 1900), screenHeight // 2 + 120, image=turtlePhoto)
     coordsOfObjects.append([mushroom, canvas.coords(mushroom)])
     coordsOfObjects.append([turtle, canvas.coords(turtle)])
+    randomNumber = random.randint(1, 4)
+    if randomNumber == 1:
+        canvas.itemconfigure(turtle, state='hidden')
+    elif randomNumber == 2:
+        canvas.itemconfigure(mushroom, state='hidden')    
 
 def createAbysses():
     '''Создание бездн'''
@@ -207,6 +208,46 @@ def createTubes():
         coordsOfObjects.append([tube, canvas.coords(tube)])
         canvas.tag_raise(tube, mario)
 
+def menu(event = None):
+    '''Создание меню'''
+    global frame
+    for widget in frame.winfo_children():
+        widget.destroy()
+    continueButton = Button(frame, text='Продолжить', font=('Arial', 30), width=20, command=continueGame)
+    continueButton.pack(side='top')
+    settingsButton = Button(frame, text='Настройки', font=('Arial', 30), width=20, command=settings)
+    settingsButton.pack(side='top', pady=10)
+    exitButton = Button(frame, text='Выход', font=('Arial', 30), width=20, command=exit)
+    exitButton.pack(side='top', pady=10)
+    frame.place(x=screenWidth // 2 - 280, y=screenHeight // 2 - 200)
+
+def continueGame():
+    ''''''
+    global frame
+    frame.place_forget()
+
+def settings():
+    '''Настройки'''
+    global volume, frame, value
+    for widget in frame.winfo_children():
+        widget.destroy()
+    musicLabel = Label(frame, text='Уровень громкости', font=('Arial', 30), width=20, bg='lightblue')
+    musicLabel.pack(side='top')
+    value.set(volume * 1000)
+    print(value.get())
+    musicSlider = Scale(frame, from_=0, to=100, orient=HORIZONTAL, length=350, variable=value, font=('Arial', 30), width=30, command=lambda e: setVolume(musicSlider.get()), bg='lightblue', highlightthickness=0)
+    musicSlider.pack(side='top', pady=10)
+    returnButton = Button(frame, text='Вернуться в меню', font=('Arial', 30), width=20, command=menu)
+    returnButton.pack(side='top')
+    frame.place(x=screenWidth // 2 - 280, y=screenHeight // 2 - 200)
+
+def setVolume(value):
+    global volume
+    volume = value / 1000
+    mixer.music.set_volume(volume)
+
+mixer.init()
+
 #Глобальные переменные
 process = None
 processOfMoving = None
@@ -220,9 +261,10 @@ gravity = 200
 directionX = 0
 directionMoving = 0
 targetY = 0
-speed = 15
+speed = 8
 count = 0
 countOfLocations = 1
+volume = 0.03
 pressedKeys = set()
 keys = ['a', 'ф', 'd', 'в']
 
@@ -237,10 +279,17 @@ window.iconphoto(False, icon)
 canvas = Canvas(window, bg='lightblue', width=screenWidth, height=screenHeight)
 canvas.pack(anchor='center')
 moneyPhoto = ImageTk.PhotoImage(Image.open('money.png').resize((170, 170)))
-moneyLabel = Label(window, image=moneyPhoto, bg='lightblue')
+moneyLabel = Label(canvas, image=moneyPhoto, bg='lightblue')
 moneyLabel.place(x=screenWidth - 300, y=0)
-countOfMoney = Label(window, text='0', font=('Arial', 50), bg='lightblue')
+countOfMoney = Label(canvas, text='0', font=('Arial', 50), bg='lightblue')
 countOfMoney.place(x=screenWidth - 120, y=50)
+frame = Frame(canvas, bg='lightblue')
+value = IntVar()
+
+#Воспроизведение музыки
+mixer.music.load('mario_sound.mp3')
+mixer.music.play()
+mixer.music.set_volume(volume)
 
 #Создание персонажа
 marioPhoto = ImageTk.PhotoImage(Image.open('mario_sprite.png').resize((170, 170)))
@@ -288,6 +337,6 @@ movingOfEnemies()
 #Управление клавишами
 window.bind('<KeyPress>', getPressedKeys)
 window.bind('<KeyRelease>', getReleasedKeys)
-window.bind('<Escape>', exit)
+window.bind('<Escape>', menu)
 
 window.mainloop()
