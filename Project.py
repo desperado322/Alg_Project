@@ -48,7 +48,7 @@ def move():
     currentX = canvas.coords(mario)[0]
     if 'a' in pressedKeys or 'ф' in pressedKeys:
         if not isJumping:
-            if count % 2 == 1:
+            if count % 4 == 0:
                 canvas.itemconfig(mario, image=marioRunAnimationPhoto1Flipped)
             else:
                 canvas.itemconfig(mario, image=marioRunAnimationPhoto2Flipped)
@@ -56,7 +56,7 @@ def move():
         sightSide = marioPhotoFlipped
     elif 'd' in pressedKeys or 'в' in pressedKeys:
         if not isJumping:
-            if count % 2 == 1:
+            if count % 4 != 0:
                 canvas.itemconfig(mario, image=marioRunAnimationPhoto1)
             else:
                 canvas.itemconfig(mario, image=marioRunAnimationPhoto2)
@@ -104,19 +104,16 @@ def checkCoords():
     global velocity, keys, pressedKeys, directionX
     currentCoords = canvas.coords(mario)
     #Координаты бездн
-    leftSideOfAbyss1 = coordsOfObjects[3][1][0]
-    rightSideOfAbyss1 = coordsOfObjects[3][1][2]
-    leftSideOfAbyss2 = coordsOfObjects[4][1][0]
-    rightSideOfAbyss2 = coordsOfObjects[4][1][2]
+    leftSideOfAbyss1 = coordsOfObjects[2][1][0]
+    rightSideOfAbyss1 = coordsOfObjects[2][1][2]
     centerOfAbyss1 = (leftSideOfAbyss1 + rightSideOfAbyss1) // 2
-    centerOfAbyss2 = (leftSideOfAbyss2 + rightSideOfAbyss2) // 2
     
     if currentCoords[0] > window.winfo_screenwidth():   #Проверка на правую границу экрана
         canvas.coords(mario, 30, canvas.coords(mario)[1])
         resetEnvironment()
     if currentCoords[0] < 30:   #Проверка на левую границу экрана
         canvas.coords(mario, 30, canvas.coords(mario)[1])
-    if (abs(currentCoords[0] - centerOfAbyss1) < (centerOfAbyss1 - leftSideOfAbyss1) / 2 or abs(currentCoords[0] - centerOfAbyss2) < (centerOfAbyss2 - leftSideOfAbyss2) / 2) and currentCoords[1] > 690:  #Проверка на бездну
+    if abs(currentCoords[0] - centerOfAbyss1) < (centerOfAbyss1 - leftSideOfAbyss1) / 2 and currentCoords[1] > 690:  #Проверка на бездну
         if currentCoords[1] > 700:
             keys.clear()
             pressedKeys.clear()
@@ -125,32 +122,51 @@ def checkCoords():
         canvas.coords(mario, canvas.coords(mario)[0], canvas.coords(mario)[1] + velocity)
         if currentCoords[1] > screenHeight:
             window.destroy()
-    for i in range(3):   #Проверка на столкновение с трубами
-        if abs(coordsOfObjects[i][1][0] - currentCoords[0]) < 100 and abs(coordsOfObjects[i][1][1] - currentCoords[1]) < 100:
-            canvas.coords(mario, coordsOfObjects[i][1][0] + (currentCoords[0] - coordsOfObjects[i][1][0]) * 1.18, canvas.coords(mario)[1])
+    for i in range(2):   #Проверка на столкновение с трубами
+        if abs(coordsOfObjects[i][1][0] - currentCoords[0]) < 100 and abs(coordsOfObjects[i][1][1] - currentCoords[1]) < 70:
+            canvas.coords(mario, (coordsOfObjects[i][1][0] + (currentCoords[0] - coordsOfObjects[i][1][0]) - 15 * directionX), currentCoords[1])
     window.after(16, checkCoords)
 
 def resetEnvironment():
     '''Обновление окружения при выходе за границы экрана'''
     global coordsOfObjects
-    for i in range(3):   #Создание новых препятствий
+    for i in range(2):   #Создание новых препятствий
         tube = canvas.create_image(random.randrange(700, 1700, 300), screenHeight // 2 + 153, image=tubePhoto)
         canvas.delete(coordsOfObjects[0][0])
         coordsOfObjects.pop(0)
         coordsOfObjects.append([tube, canvas.coords(tube)])
-    for i in range(2):   #Создание бездн
+        canvas.tag_raise(tube, mario)
+
+    canvas.tag_raise(ground)
+
+    for i in range(1):   #Создание бездн
         positionX0 = random.randrange(500, 1700, 700)
-        if abs(positionX0 - all(coordsOfObjects[i][1][0] for i in range(3))) > 300:
+        if all(abs(positionX0 - coordsOfObjects[i][1][0]) > 200 for i in range(2)):
             position = [positionX0, screenHeight // 2 + 195, positionX0 + random.randint(100, 200), screenHeight]
             abyss = canvas.create_rectangle(position, fill='lightblue', outline='')
             canvas.delete(coordsOfObjects[0][0])
             coordsOfObjects.pop(0)
             coordsOfObjects.append([abyss, canvas.coords(abyss)])
-    canvas.tag_raise(mario)
-    canvas.tag_raise(ground)
+
+    canvas.tag_lower(groundLine)
+    canvas.tag_raise(mario, abyss)
+    for i in range(2):
+        canvas.tag_raise(coordsOfObjects[i][0], mario)
 
 def movingOfEnemies():
     pass
+
+def createAbysses():
+    global coordsOfObjects, abyss
+    for i in range(20):   
+        positionX0 = random.randrange(500, 1700, 200)
+        if len(coordsOfObjects) < 3:
+            if all(abs(positionX0 - coordsOfObjects[i][1][0]) > 200 for i in range(2)):
+                position = [positionX0, screenHeight // 2 + 195, positionX0 + random.randint(100, 200), screenHeight]
+                abyss = canvas.create_rectangle(position, fill='lightblue', outline='')
+                coordsOfObjects.append([abyss, canvas.coords(abyss)])
+        else:
+            break
 
 #Глобальные переменные
 process = None
@@ -187,23 +203,26 @@ marioRunAnimationPhoto1Flipped = ImageTk.PhotoImage(Image.open('mario_run_animat
 marioRunAnimationPhoto2 = ImageTk.PhotoImage(Image.open('mario_run_animation_2.png').resize((170, 170)))
 marioRunAnimationPhoto2Flipped = ImageTk.PhotoImage(Image.open('mario_run_animation_2.png').resize((170, 170)).transpose(Image.FLIP_LEFT_RIGHT))
 mario = canvas.create_image(30, screenHeight // 2 + 153, image=marioPhoto)
+canvas.tag_raise(mario)
 
 #Создание объектов окружения
 groundPhoto = ImageTk.PhotoImage(Image.open('ground.png').resize((screenWidth, 500)))
-tubePhoto = ImageTk.PhotoImage(Image.open('tube.png').resize((300, 600)))
-groundLine = canvas.create_line(0, screenHeight // 2 + 200, screenWidth - 100, screenHeight // 2 + 200, fill='black', width=8)
+tubePhoto = ImageTk.PhotoImage(Image.open('tube.png').resize((1300, 600)))
+groundLine = canvas.create_line(0, screenHeight // 2 + 200, screenWidth, screenHeight // 2 + 200, fill='black', width=8)
+ground = canvas.create_image(screenWidth / 2, 990, image=groundPhoto)
 coordsOfObjects = []
-for i in range(3):
+for i in range(2):
     tube = canvas.create_image(random.randrange(700, 1700, 300), screenHeight // 2 + 153, image=tubePhoto)
     coordsOfObjects.append([tube, canvas.coords(tube)])
-for i in range(2):   
-    positionX0 = random.randrange(500, 1700, 700)
-    if abs(positionX0 - all(coordsOfObjects[i][1][0] for i in range(3))) > 300:
-        position = [positionX0, screenHeight // 2 + 195, positionX0 + random.randint(100, 200), screenHeight]
-        abyss = canvas.create_rectangle(position, fill='lightblue', outline='')
-        coordsOfObjects.append([abyss, canvas.coords(abyss)])
-        groundPhoto = ImageTk.PhotoImage(Image.open('ground.png').resize((positionX0, 500)))
-        ground = canvas.create_image(0, 990, image=groundPhoto)
+    canvas.tag_raise(tube, mario)
+
+canvas.tag_raise(ground)
+
+for i in range(10):
+    try:
+        createAbysses()
+    except NameError:
+        createAbysses()
 
 #Создание врагов
 '''mushroomPhoto = ImageTk.PhotoImage(Image.open('mushroom.png').resize((170, 170)))
@@ -213,8 +232,11 @@ for i in range(2):
     coordsOfEnemies.append([mushroom, canvas.coords(mushroom)])'''
 
 #Отрисовка поверх других объектов
-canvas.tag_raise(mario)
-canvas.tag_raise(ground)
+canvas.tag_lower(groundLine)
+canvas.tag_raise(mario, abyss)
+for i in range(2):
+    canvas.tag_raise(coordsOfObjects[i][0], mario)
+
 
 #Параллельные циклы
 checkCoords()
