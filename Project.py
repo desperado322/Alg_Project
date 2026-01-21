@@ -1,6 +1,7 @@
 from tkinter import *
 from PIL import Image, ImageTk
 import random
+import sys, os
 
 def getPressedKeys(event):
     '''Получение нажатых кнопок'''
@@ -35,9 +36,9 @@ def startJump():
     isJumping = True
     velocity = -35
     sightSide = canvas.itemcget(mario, "image")
-    if sightSide == 'pyimage6' or sightSide == 'pyimage8' or sightSide == 'pyimage2':
+    if sightSide in ['pyimage3', 'pyimage7', 'pyimage9', 'pyimage11']:
         canvas.itemconfig(mario, image=marioJumpPhoto)
-    elif sightSide == 'pyimage7' or sightSide == 'pyimage9' or sightSide == 'pyimage3':
+    elif sightSide in ['pyimage4', 'pyimage8', 'pyimage10', 'pyimage12']:
         canvas.itemconfig(mario, image=marioJumpPhotoFlipped)
     jump()
 
@@ -48,18 +49,22 @@ def move():
     currentX = canvas.coords(mario)[0]
     if 'a' in pressedKeys or 'ф' in pressedKeys:
         if not isJumping:
-            if count % 4 == 0:
+            if count % 9 == 1:
                 canvas.itemconfig(mario, image=marioRunAnimationPhoto1Flipped)
-            else:
+            elif count % 9 >= 4 and count % 9 <= 6:
                 canvas.itemconfig(mario, image=marioRunAnimationPhoto2Flipped)
+            else:
+                canvas.itemconfig(mario, image=marioRunAnimationPhoto3Flipped)
         directionX = -1
         sightSide = marioPhotoFlipped
     elif 'd' in pressedKeys or 'в' in pressedKeys:
         if not isJumping:
-            if count % 4 != 0:
+            if count % 9 == 1:
                 canvas.itemconfig(mario, image=marioRunAnimationPhoto1)
-            else:
+            elif count % 9 >= 4 and count % 9 <= 6:
                 canvas.itemconfig(mario, image=marioRunAnimationPhoto2)
+            else:
+                canvas.itemconfig(mario, image=marioRunAnimationPhoto3)
         directionX = 1
         sightSide = marioPhoto
     updateMove(directionX, currentX)
@@ -93,15 +98,15 @@ def updateJump(currentY):
         currentY = canvas.coords(groundLine)[1] - 47
         velocity = 0
         isJumping = False
-        if sightSide == 'pyimage6' or sightSide == 'pyimage8' or sightSide == 'pyimage2':
+        if sightSide in ['pyimage3', 'pyimage7', 'pyimage9', 'pyimage11']:
             canvas.itemconfig(mario, image=marioPhoto)
-        elif sightSide == 'pyimage7' or sightSide == 'pyimage9' or sightSide == 'pyimage3':
+        elif sightSide in ['pyimage4', 'pyimage8', 'pyimage10', 'pyimage12']:
             canvas.itemconfig(mario, image=marioPhotoFlipped)
     canvas.coords(mario, canvas.coords(mario)[0], currentY)
 
 def checkCoords():
     '''Проверка координат персонажа на коллизии'''
-    global velocity, keys, pressedKeys, directionX
+    global velocity, keys, pressedKeys, directionX, processOfMoving, processOfCheckCoords
     currentCoords = canvas.coords(mario)
     #Координаты бездн
     leftSideOfAbyss1 = coordsOfObjects[2][1][0]
@@ -125,55 +130,99 @@ def checkCoords():
     for i in range(2):   #Проверка на столкновение с трубами
         if abs(coordsOfObjects[i][1][0] - currentCoords[0]) < 100 and abs(coordsOfObjects[i][1][1] - currentCoords[1]) < 70:
             canvas.coords(mario, (coordsOfObjects[i][1][0] + (currentCoords[0] - coordsOfObjects[i][1][0]) - 15 * directionX), currentCoords[1])
-    window.after(16, checkCoords)
+    if countOfLocations == 6:
+        window.after_cancel(processOfMoving)
+        if abs(currentCoords[0] - 1800) < 50:
+            winLabel = Label(canvas, text='Вы выиграли!', font=('Arial', 100), bg='lightblue')
+            winLabel.place(x=screenWidth // 2 - 400, y=screenHeight // 2 - 200)
+            window.after_cancel(processOfCheckCoords)
+            keys.clear()
+            pressedKeys.clear()
+            directionX = 0
+    processOfCheckCoords = window.after(16, checkCoords)
 
 def resetEnvironment():
     '''Обновление окружения при выходе за границы экрана'''
-    global coordsOfObjects
-    for i in range(3):   #Удаление старых объектов
+    global countOfLocations, coordsOfObjects, goingLeft, processOfMoving, countOfMoney
+    for i in range(len(coordsOfObjects)):   #Удаление старых объектов
         canvas.delete(coordsOfObjects[0][0])
         coordsOfObjects.pop(0)
     createTubes() #Создание новых препятствий
     canvas.tag_raise(ground)
     createAbysses() #Создание бездн
+
+    if countOfLocations != 5:
+        createEnemies()
+    else:
+        canvas.create_image(1800, screenHeight // 2 + 118, image=flagPhoto)
         
-    canvas.tag_raise(mario, coordsOfObjects[-1][0])
+    canvas.tag_raise(mario, coordsOfObjects[2][0])
     canvas.tag_lower(groundLine)
     for i in range(2):
         canvas.tag_raise(coordsOfObjects[i][0], mario)
+    goingLeft = True
+    countOfLocations += 1
+    countOfMoney.configure(text=str(countOfLocations - 1))
 
 def movingOfEnemies():
-    pass
+    '''Движение врагов'''
+    global directionMoving, goingLeft, processOfMoving
+    currentMoving = canvas.coords(coordsOfObjects[3][0])[0]
+    if currentMoving >= 300 and goingLeft:
+        directionMoving = -1
+        if currentMoving < 310:
+            goingLeft = False
+    elif currentMoving <= 500:
+        directionMoving = 1
+        if currentMoving > 490:
+            goingLeft = True
+    currentMoving += directionMoving * 3
+    canvas.coords(coordsOfObjects[3][0], currentMoving, canvas.coords(coordsOfObjects[3][0])[1])
+    processOfMoving = window.after(16, movingOfEnemies)
+
+def createEnemies():
+    '''Создание врагов'''
+    global coordsOfObjects
+    mushroom = canvas.create_image(random.randrange(350, 550, 50), screenHeight // 2 + 153, image=mushroomPhoto)
+    turtle = canvas.create_image(random.randint(1800, 1900), screenHeight // 2 + 120, image=turtlePhoto)
+    coordsOfObjects.append([mushroom, canvas.coords(mushroom)])
+    coordsOfObjects.append([turtle, canvas.coords(turtle)])
 
 def createAbysses():
     '''Создание бездн'''
     global coordsOfObjects
-    positionX0 = random.randrange(500, 1700, 50)
-    if all(abs(positionX0 - coordsOfObjects[i][1][0]) > 200 for i in range(2)):
+    positionX0 = random.randrange(800, 1600, 50)
+    if all(abs(positionX0 - coordsOfObjects[i][1][0]) > 230 for i in range(2)):
         position = [positionX0, screenHeight // 2 + 195, positionX0 + random.randint(100, 200), screenHeight]
         abyss = canvas.create_rectangle(position, fill='lightblue', outline='')
         coordsOfObjects.append([abyss, canvas.coords(abyss)])
     else:
         createAbysses()
+
 def createTubes():
     '''Создание препятствий'''
     global coordsOfObjects
     for i in range(2):
-        tube = canvas.create_image(random.randrange(700, 1700, 300), screenHeight // 2 + 153, image=tubePhoto)
+        tube = canvas.create_image(random.randrange(800, 1600, 300), screenHeight // 2 + 153, image=tubePhoto)
         coordsOfObjects.append([tube, canvas.coords(tube)])
         canvas.tag_raise(tube, mario)
 
 #Глобальные переменные
 process = None
+processOfMoving = None
+processOfCheckCoords = None
 isJumping = False
 isMoving = False
 isOnground = True
+goingLeft = True
 velocity = 0
 gravity = 200
 directionX = 0
+directionMoving = 0
 targetY = 0
 speed = 15
 count = 0
+countOfLocations = 1
 pressedKeys = set()
 keys = ['a', 'ф', 'd', 'в']
 
@@ -187,6 +236,11 @@ icon = PhotoImage(file='mario_icon.png')
 window.iconphoto(False, icon)
 canvas = Canvas(window, bg='lightblue', width=screenWidth, height=screenHeight)
 canvas.pack(anchor='center')
+moneyPhoto = ImageTk.PhotoImage(Image.open('money.png').resize((170, 170)))
+moneyLabel = Label(window, image=moneyPhoto, bg='lightblue')
+moneyLabel.place(x=screenWidth - 300, y=0)
+countOfMoney = Label(window, text='0', font=('Arial', 50), bg='lightblue')
+countOfMoney.place(x=screenWidth - 120, y=50)
 
 #Создание персонажа
 marioPhoto = ImageTk.PhotoImage(Image.open('mario_sprite.png').resize((170, 170)))
@@ -197,10 +251,13 @@ marioRunAnimationPhoto1 = ImageTk.PhotoImage(Image.open('mario_run_animation_1.p
 marioRunAnimationPhoto1Flipped = ImageTk.PhotoImage(Image.open('mario_run_animation_1.png').resize((170, 170)).transpose(Image.FLIP_LEFT_RIGHT))
 marioRunAnimationPhoto2 = ImageTk.PhotoImage(Image.open('mario_run_animation_2.png').resize((170, 170)))
 marioRunAnimationPhoto2Flipped = ImageTk.PhotoImage(Image.open('mario_run_animation_2.png').resize((170, 170)).transpose(Image.FLIP_LEFT_RIGHT))
+marioRunAnimationPhoto3 = ImageTk.PhotoImage(Image.open('mario_run_animation_3.png').resize((170, 170)))
+marioRunAnimationPhoto3Flipped = ImageTk.PhotoImage(Image.open('mario_run_animation_3.png').resize((170, 170)).transpose(Image.FLIP_LEFT_RIGHT))
 mario = canvas.create_image(30, screenHeight // 2 + 153, image=marioPhoto)
 canvas.tag_raise(mario)
 
 #Создание объектов окружения
+flagPhoto = ImageTk.PhotoImage(Image.open('flag.png').resize((170, 170)))
 groundPhoto = ImageTk.PhotoImage(Image.open('ground.png').resize((screenWidth, 500)))
 tubePhoto = ImageTk.PhotoImage(Image.open('tube.png').resize((1300, 600)))
 groundLine = canvas.create_line(0, screenHeight // 2 + 200, screenWidth, screenHeight // 2 + 200, fill='black', width=8)
@@ -213,14 +270,12 @@ canvas.tag_raise(ground)
 createAbysses()
 
 #Создание врагов
-'''mushroomPhoto = ImageTk.PhotoImage(Image.open('mushroom.png').resize((170, 170)))
-coordsOfEnemies = []
-for i in range(2):
-    mushroom = canvas.create_image(random.randrange(700, 1700, 300), screenHeight // 2 + 153, image=mushroomPhoto)
-    coordsOfEnemies.append([mushroom, canvas.coords(mushroom)])'''
+mushroomPhoto = ImageTk.PhotoImage(Image.open('mushroom.png').resize((170, 170)))
+turtlePhoto = ImageTk.PhotoImage(Image.open('turtle.png').resize((170, 170)).transpose(Image.FLIP_LEFT_RIGHT))
+createEnemies()
 
 #Отрисовка поверх других объектов
-canvas.tag_raise(mario, coordsOfObjects[-1][0])
+canvas.tag_raise(mario, coordsOfObjects[2][0])
 canvas.tag_lower(groundLine)
 for i in range(2):
     canvas.tag_raise(coordsOfObjects[i][0], mario)
@@ -228,6 +283,7 @@ for i in range(2):
 
 #Параллельные циклы
 checkCoords()
+movingOfEnemies()
 
 #Управление клавишами
 window.bind('<KeyPress>', getPressedKeys)
