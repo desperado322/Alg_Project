@@ -234,7 +234,6 @@ def settings():
     musicLabel = Label(frame, text='Уровень громкости', font=('Arial', 30), width=20, bg='lightblue')
     musicLabel.pack(side='top')
     value.set(volume * 1000)
-    print(value.get())
     musicSlider = Scale(frame, from_=0, to=100, orient=HORIZONTAL, length=350, variable=value, font=('Arial', 30), width=30, command=lambda e: setVolume(musicSlider.get()), bg='lightblue', highlightthickness=0)
     musicSlider.pack(side='top', pady=10)
     returnButton = Button(frame, text='Вернуться в меню', font=('Arial', 30), width=20, command=menu)
