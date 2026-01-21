@@ -106,13 +106,12 @@ def updateJump(currentY):
 
 def checkCoords():
     '''Проверка координат персонажа на коллизии'''
-    global velocity, speed, processOfMoving, processOfCheckCoords
+    global velocity, speed, processOfMoving, processOfCheckCoords, isOnground, isOnTube
     currentCoords = canvas.coords(mario)
     #Координаты бездн
     leftSideOfAbyss1 = coordsOfObjects[2][1][0]
     rightSideOfAbyss1 = coordsOfObjects[2][1][2]
-    centerOfAbyss1 = (leftSideOfAbyss1 + rightSideOfAbyss1) // 2
-    
+    centerOfAbyss1 = (leftSideOfAbyss1 + rightSideOfAbyss1) // 2  
     if currentCoords[0] > window.winfo_screenwidth():   #Проверка на правую границу экрана
         canvas.coords(mario, 30, canvas.coords(mario)[1])
         resetEnvironment()
@@ -121,13 +120,14 @@ def checkCoords():
     if abs(currentCoords[0] - centerOfAbyss1) < (centerOfAbyss1 - leftSideOfAbyss1) / 2 and currentCoords[1] > 690:  #Проверка на бездну
         if currentCoords[1] > 700:
             speed = 0
-        velocity += gravity * 0.016
-        canvas.coords(mario, canvas.coords(mario)[0], canvas.coords(mario)[1] + velocity)
+        falling()
         if currentCoords[1] > screenHeight:
             window.destroy()
     for i in range(2):   #Проверка на столкновение с трубами
-        if abs(coordsOfObjects[i][1][0] - currentCoords[0]) < 100 and abs(coordsOfObjects[i][1][0] - currentCoords[0]) > 90  and abs(coordsOfObjects[i][1][1] - currentCoords[1]) < 70:
+        if abs(coordsOfObjects[i][1][0] - currentCoords[0]) < 100 and abs(coordsOfObjects[i][1][0] - currentCoords[0]) > 75  and abs(coordsOfObjects[i][1][1] - currentCoords[1]) < 70:
             canvas.coords(mario, (coordsOfObjects[i][1][0] + (currentCoords[0] - coordsOfObjects[i][1][0]) - 15 * directionX), currentCoords[1])
+        elif abs(coordsOfObjects[i][1][0] - currentCoords[0]) < 34 and abs(coordsOfObjects[i][1][1] - currentCoords[1]) < 70:
+            canvas.coords(mario, coordsOfObjects[i][1][0], currentCoords[1])
     if countOfLocations == 6:
         window.after_cancel(processOfMoving)
         if abs(currentCoords[0] - 1800) < 50:
@@ -136,6 +136,12 @@ def checkCoords():
             window.after_cancel(processOfCheckCoords)
             speed = 0
     processOfCheckCoords = window.after(16, checkCoords)
+
+def falling():
+    global velocity
+    velocity += gravity * 0.00016
+    canvas.coords(mario, canvas.coords(mario)[0], canvas.coords(mario)[1] + velocity)
+    window.after(16, falling)
 
 def resetEnvironment():
     '''Обновление окружения при выходе за границы экрана'''
@@ -254,6 +260,7 @@ processOfCheckCoords = None
 isJumping = False
 isMoving = False
 isOnground = True
+isOnTube = False
 goingLeft = True
 velocity = 0
 gravity = 200
