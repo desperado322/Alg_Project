@@ -106,7 +106,7 @@ def updateJump(currentY):
 
 def checkCoords():
     '''Проверка координат персонажа на коллизии'''
-    global velocity, speed, processOfMoving, processOfCheckCoords, isOnground, isJumping 
+    global velocity, speed, processOfMoving, processOfCheckCoords, isOnground, isJumping, countOfMoney
     currentCoords = convertCoords(canvas.coords(mario), [90, 90])
     mushroomCoords = convertCoords(canvas.coords(coordsOfObjects[3][0]), [90, 90])
     turtleCoords = convertCoords(canvas.coords(coordsOfObjects[4][0]), [90, 90])
@@ -117,6 +117,7 @@ def checkCoords():
     if mushroomCoords and overlaps(*currentCoords, *mushroomCoords) and canvas.itemcget(coordsOfObjects[3][0], "state") != 'hidden':
         if currentCoords[3] - 5 <= mushroomCoords[1] and velocity > 0:
             canvas.itemconfig(coordsOfObjects[3][0], state='hidden')
+            countOfMoney.configure(text=str(int(countOfMoney.cget('text')) + 1))
         else:
             gameOver()
             canvas.itemconfig(mario, image=moneyPhoto)
@@ -129,6 +130,7 @@ def checkCoords():
                 canvas.coords(mario, turtleCoords[0] - 50, turtleCoords[1])
             else:
                 canvas.itemconfig(coordsOfObjects[4][0], state='hidden')
+                countOfMoney.configure(text=str(int(countOfMoney.cget('text')) + 1))
         elif canvas.itemcget(coordsOfObjects[4][0], "image") == 'pyimage17':
             gameOver()
             canvas.itemconfig(mario, image=moneyPhoto)
@@ -161,6 +163,7 @@ def checkCoords():
     processOfCheckCoords = window.after(16, checkCoords)
 
 def falling():
+    '''Падение'''
     global velocity
     velocity += gravity * 0.016
     canvas.coords(mario, canvas.coords(mario)[0], canvas.coords(mario)[1] + velocity)
@@ -175,7 +178,6 @@ def resetEnvironment():
     canvas.tag_raise(ground)
     createAbysses() #Создание бездн
     createEnemies()
-
     if countOfLocations == 5:
         canvas.create_image(1800, screenHeight // 2 + 118, image=flagPhoto)
         canvas.itemconfig(coordsOfObjects[3][0], state='hidden')
@@ -186,7 +188,7 @@ def resetEnvironment():
         canvas.tag_raise(coordsOfObjects[i][0], mario)
     goingLeft = True
     countOfLocations += 1
-    countOfMoney.configure(text=str(countOfLocations - 1))
+    countOfMoney.configure(text=str(int(countOfMoney.cget('text')) + 1))
 
 def movingOfEnemies():
     '''Движение врагов'''
@@ -208,7 +210,7 @@ def createEnemies():
     '''Создание врагов'''
     global coordsOfObjects
     mushroom = canvas.create_image(random.randrange(350, 550, 50), screenHeight // 2 + 153, image=mushroomPhoto)
-    turtle = canvas.create_image(random.randint(1700, 1700), screenHeight // 2 + 153, image=turtlePhoto)
+    turtle = canvas.create_image(random.randint(1800, 1850), screenHeight // 2 + 153, image=turtlePhoto)
     coordsOfObjects.append([mushroom, canvas.coords(mushroom)])
     coordsOfObjects.append([turtle, canvas.coords(turtle)])
     randomNumber = random.randint(1, 4)
@@ -250,7 +252,7 @@ def menu(event = None):
     frame.place(x=screenWidth // 2 - 280, y=screenHeight // 2 - 200)
 
 def continueGame():
-    ''''''
+    '''Продолжение игры'''
     global frame
     frame.place_forget()
 
@@ -269,11 +271,13 @@ def settings():
     frame.place(x=screenWidth // 2 - 280, y=screenHeight // 2 - 200)
 
 def setVolume(value):
+    '''Изменение громкости музыки'''
     global volume
     volume = value / 1000
     mixer.music.set_volume(volume)
 
 def overlaps(playerLeft, playerTop, playerRight, playerBottom, objectLeft, objectTop, objectRight, objectBottom):
+    '''Просчитывание пересечений объектов'''
     horizontal = (playerLeft < objectRight) and (playerRight > objectLeft)
     vertical = (playerTop > objectBottom) and (playerBottom < objectTop)
     return horizontal and vertical
@@ -291,6 +295,7 @@ def convertCoords(objectCoords, objectsSprites):
     return objectCoords
 
 def gameOver():
+    '''Окончание игры'''
     global frame
     for widget in frame.winfo_children():
         widget.destroy()
