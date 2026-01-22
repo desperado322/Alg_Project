@@ -191,7 +191,7 @@ def resetEnvironment():
 
 def movingOfEnemies():
     '''Движение врагов'''
-    global directionMoving, goingLeft, processOfMoving
+    global directionMoving, goingLeft, processOfMoving, speedEnemy
     currentMoving = canvas.coords(coordsOfObjects[3][0])[0]
     if currentMoving >= 300 and goingLeft:
         directionMoving = -1
@@ -201,7 +201,7 @@ def movingOfEnemies():
         directionMoving = 1
         if currentMoving > 490:
             goingLeft = True
-    currentMoving += directionMoving * 3
+    currentMoving += directionMoving * speedEnemy
     canvas.coords(coordsOfObjects[3][0], currentMoving, canvas.coords(coordsOfObjects[3][0])[1])
     processOfMoving = window.after(16, movingOfEnemies)
 
@@ -330,6 +330,7 @@ speed = 8
 count = 0
 countOfLocations = 1
 volume = 0.03
+speedEnemy = 3
 pressedKeys = set()
 keys = ['a', 'ф', 'd', 'в']
 tubePhotos = []
