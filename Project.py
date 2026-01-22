@@ -92,7 +92,7 @@ def updateMove(directionX, currentX):
 def updateJump(currentY):
     '''Анимация прыжка'''
     global isJumping, velocity, sightSide
-    velocity += gravity * 0.016
+    velocity += gravity * 0.016 - 0.5
     currentY += velocity
     if currentY + 47 > canvas.coords(groundLine)[1] and canvas.coords(mario)[0] < canvas.coords(groundLine)[2] and canvas.coords(mario)[0] > canvas.coords(groundLine)[0]:  #Проверка на землю
         currentY = canvas.coords(groundLine)[1] - 47
@@ -123,15 +123,14 @@ def checkCoords():
             canvas.itemconfig(mario, image=moneyPhoto)
     if turtleCoords and overlaps(*currentCoords, *turtleCoords) and canvas.itemcget(coordsOfObjects[4][0], "state") != 'hidden':
         if currentCoords[3] - 5 <= turtleCoords[1] and velocity > 0:
-            canvas.coords(mario, canvas.coords(mario)[0], 705)
-            if canvas.itemcget(coordsOfObjects[4][0], "image") == 'pyimage17':
+            if canvas.itemcget(coordsOfObjects[4][0], "image") == 'pyimage18':
                 canvas.itemconfig(coordsOfObjects[4][0], image=shellPhoto)
                 canvas.coords(coordsOfObjects[4][0], canvas.coords(coordsOfObjects[4][0])[0], canvas.coords(coordsOfObjects[4][0])[1])
                 canvas.coords(mario, turtleCoords[0] - 50, turtleCoords[1])
             else:
                 canvas.itemconfig(coordsOfObjects[4][0], state='hidden')
                 countOfMoney.configure(text=str(int(countOfMoney.cget('text')) + 1))
-        elif canvas.itemcget(coordsOfObjects[4][0], "image") == 'pyimage17':
+        elif canvas.itemcget(coordsOfObjects[4][0], "image") == 'pyimage18':
             gameOver()
             canvas.itemconfig(mario, image=moneyPhoto)
         else:
@@ -147,11 +146,11 @@ def checkCoords():
             isJumping = True
         falling()
         if canvas.coords(mario)[1] > screenHeight:
-            window.destroy()
+            gameOver()
     for i in range(2):   #Проверка на столкновение с трубами
-        if abs(coordsOfObjects[i][1][0] - canvas.coords(mario)[0]) < 100 and abs(coordsOfObjects[i][1][0] - canvas.coords(mario)[0]) > 75  and abs(coordsOfObjects[i][1][1] - canvas.coords(mario)[1]) < 70:
+        if abs(coordsOfObjects[i][1][0] - canvas.coords(mario)[0]) < 100 and abs(coordsOfObjects[i][1][0] - canvas.coords(mario)[0]) > 75  and canvas.coords(mario)[1] > convertCoords(canvas.coords(coordsOfObjects[i][0]), [tubePhotos[i].width(), tubePhotos[i].height()])[3] - 100:
             canvas.coords(mario, (coordsOfObjects[i][1][0] + (canvas.coords(mario)[0] - coordsOfObjects[i][1][0]) - 15 * directionX), canvas.coords(mario)[1])
-        elif abs(coordsOfObjects[i][1][0] - canvas.coords(mario)[0]) < 34 and abs(coordsOfObjects[i][1][1] - canvas.coords(mario)[1]) < 70:
+        elif abs(coordsOfObjects[i][1][0] - canvas.coords(mario)[0]) < 70 and canvas.coords(mario)[1] > convertCoords(canvas.coords(coordsOfObjects[i][0]), [tubePhotos[i].width(), tubePhotos[i].height()])[3] - 100:
             canvas.coords(mario, coordsOfObjects[i][1][0], canvas.coords(mario)[1])
     if countOfLocations == 6:
         window.after_cancel(processOfMoving)
@@ -232,10 +231,17 @@ def createAbysses():
 
 def createTubes():
     '''Создание препятствий'''
-    global coordsOfObjects
+    global coordsOfObjects, tubePhotos
+    tubePhotos.clear()
     for i in range(2):
-        tube = canvas.create_image(random.randrange(800, 1600, 300), screenHeight // 2 + 153, image=tubePhoto)
+        tubePhoto = ImageTk.PhotoImage(Image.open('tube.png').resize((130, random.randrange(100, 301, 50))))
+        tubePhotos.append(tubePhoto)
+        tube = canvas.create_image(random.randrange(800, 1600, 300), canvas.coords(groundLine)[1], image=tubePhotos[i])
+        canvas.coords(tube, canvas.coords(tube)[0], convertCoords(canvas.coords(tube), [tubePhotos[i].width(), tubePhotos[i].height()])[3])
         coordsOfObjects.append([tube, canvas.coords(tube)])
+        if i == 1:
+            if canvas.coords(tube)[0] == coordsOfObjects[0][1][0]:
+                canvas.itemconfig(tube, state='hidden')
         canvas.tag_raise(tube, mario)
 
 def menu(event = None):
@@ -326,6 +332,7 @@ countOfLocations = 1
 volume = 0.03
 pressedKeys = set()
 keys = ['a', 'ф', 'd', 'в']
+tubePhotos = []
 
 #Создание окна приложения
 window = Tk()
@@ -366,10 +373,15 @@ canvas.tag_raise(mario)
 
 #Создание объектов окружения
 flagPhoto = ImageTk.PhotoImage(Image.open('flag.png').resize((170, 170)))
-groundPhoto = ImageTk.PhotoImage(Image.open('ground.png').resize((screenWidth, 500)))
-tubePhoto = ImageTk.PhotoImage(Image.open('tube.png').resize((1300, 600)))
 groundLine = canvas.create_line(0, screenHeight // 2 + 200, screenWidth, screenHeight // 2 + 200, fill='black', width=8)
-ground = canvas.create_image(screenWidth / 2, 990, image=groundPhoto)
+groundPhoto = Image.open('ground.png').resize((100, 100)).convert('RGBA')
+groundTextures = Image.new('RGBA', (screenWidth, 500))
+for y in range(0, 500, 100):
+    for x in range(0, screenWidth, 100):
+        groundTextures.paste(groundPhoto, (x, y))
+        
+groundTextures = ImageTk.PhotoImage(groundTextures)
+ground = canvas.create_image(screenWidth / 2, 990, image=groundTextures)
 coordsOfObjects = []
 createTubes()
 
@@ -387,8 +399,7 @@ createEnemies()
 canvas.tag_raise(mario, coordsOfObjects[2][0])
 canvas.tag_lower(groundLine)
 for i in range(2):
-    canvas.tag_raise(coordsOfObjects[i][0], mario)
-
+    canvas.tag_raise(coordsOfObjects[i][0])
 
 #Параллельные циклы
 checkCoords()
