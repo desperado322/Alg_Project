@@ -2,7 +2,8 @@ from tkinter import *
 from PIL import Image, ImageTk
 import random
 import sys
-#from pygame import #mixer
+import time
+from pygame import mixer
 
 '''переменные окружения'''
 
@@ -120,11 +121,15 @@ class App(Tk):
         self.canvas = Canvas(self, bg='lightblue', width=self.screenWidth, height=self.screenHeight)
         self.canvas.pack(anchor='center')
 
-        # Инициализация музыки
-        #mixer.init()
-        #mixer.music.load('mario_sound.mp3')
-        #mixer.music.play()
-        #mixer.music.set_volume(volume)
+        mixer.init(frequency=44100, size=-16, channels=2, buffer=2048)
+        mixer.music.load('mario_sound.mp3')
+        mixer.music.play()
+        mixer.music.set_volume(volume)
+        self.coinSound = mixer.Sound('coin.mp3')
+        self.coinSound.set_volume(volume)
+        self.winSound = mixer.Sound('win.mp3')
+        self.winSound.set_volume(volume)
+
 
         # Создание интерфейса
         
@@ -457,12 +462,12 @@ class App(Tk):
         leftSideOfAbyss1 = self.coordsOfObjects[2][1][0]
         rightSideOfAbyss1 = self.coordsOfObjects[2][1][2]
         centerOfAbyss1 = (leftSideOfAbyss1 + rightSideOfAbyss1) // 2
-        print(self.canvas.itemcget(self.coordsOfObjects[4][0], "image"), self.turtlePhoto, self.canvas.itemcget(self.coordsOfObjects[4][0], "image")[-2:], self.shellPhoto)
         #Проверка на столкновение с грибом
         if mushroomCoords and self.overlaps(*currentCoords, *mushroomCoords) and self.canvas.itemcget(self.coordsOfObjects[3][0], "state") != 'hidden':
             if currentCoords[3] - 5 <= mushroomCoords[1] and velocityOfJump > 0:
                 self.canvas.itemconfig(self.coordsOfObjects[3][0], state='hidden')
                 self.countOfMoney.configure(text=str(int(self.countOfMoney.cget('text')) + 1))
+                self.coinSound.play()
             else:
                 if not self.is_dead:
                     self.gameOver()
@@ -478,6 +483,7 @@ class App(Tk):
                 elif int(self.canvas.itemcget(self.coordsOfObjects[4][0], "image")[-2:]) == int(str(self.shellPhoto)[-2:]):
                     self.canvas.itemconfig(self.coordsOfObjects[4][0], state='hidden')
                     self.countOfMoney.configure(text=str(int(self.countOfMoney.cget('text')) + 1))
+                    self.coinSound.play()
             elif self.canvas.itemcget(self.coordsOfObjects[4][0], "image") == self.turtlePhoto:
                 if not self.is_dead:
                     self.gameOver()
@@ -514,9 +520,13 @@ class App(Tk):
             self.after_cancel(processOfMoving)
             if abs(self.canvas.coords(self.mario)[0] - 1800) < 50:
                 winLabel = Label(self.canvas, text='Вы выиграли!', font=('Arial', 100), bg='lightblue')
-                winLabel.place(x=self.screenWidth // 2 - 400, y=self.screenHeight // 2 - 200)
+                winLabel.place(x=self.screenWidth // 2 - 400, y=self.screenHeight // 2 - 400)
                 self.after_cancel(processOfCheckCoords)
+                self.winSound.play()
                 speed = 0
+                exitButton = Button(self.canvas, text='Рестарт', font=('Arial', 30, 'bold'), width=20,
+            bg = '#FCB3B2', fg = '#352626', command=self.restartGame)
+                exitButton.place(x=self.screenWidth // 2 - 400, y=self.screenHeight // 2 - 200, bg='#FCB3B2')
         processOfCheckCoords = self.after(16, self.checkCoords)
     
     def falling(self, object, positionX, positionY):
@@ -557,6 +567,7 @@ class App(Tk):
         goingLeft = True
         countOfLocations += 1
         self.countOfMoney.configure(text=str(int(self.countOfMoney.cget('text')) + 1))
+        self.coinSound.play()
         
     def movingOfEnemies(self):
 
