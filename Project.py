@@ -32,12 +32,12 @@ def startMove():
     move()
 
 def startJump():
-    global isJumping, velocity, sightSide
+    global isJumping, velocityOfJump, sightSide
     isJumping = True
     if canvas.coords(mario)[1] == 693:
-        velocity = -30
+        velocityOfJump = -30
     else:
-        velocity = -35
+        velocityOfJump = -35
     sightSide = canvas.itemcget(mario, "image")
     if sightSide in ['pyimage3', 'pyimage7', 'pyimage9', 'pyimage11']:
         canvas.itemconfig(mario, image=marioJumpPhoto)
@@ -76,10 +76,10 @@ def move():
 
 def jump():
     '''Прыжок'''
-    global velocity
+    global velocityOfJump
     currentY = canvas.coords(mario)[1]
     updateJump(currentY)
-    if velocity != 0:
+    if velocityOfJump != 0:
         window.after(16, jump)
         
 def updateMove(directionX, currentX):
@@ -94,12 +94,12 @@ def updateMove(directionX, currentX):
     
 def updateJump(currentY):
     '''Анимация прыжка'''
-    global isJumping, velocity, sightSide
-    velocity += gravity * 0.016 - 2
-    currentY += velocity
+    global isJumping, velocityOfJump, sightSide
+    velocityOfJump += gravity * 0.016 - 2
+    currentY += velocityOfJump
     if currentY + 47 > canvas.coords(groundLine)[1] and canvas.coords(mario)[0] < canvas.coords(groundLine)[2] and canvas.coords(mario)[0] > canvas.coords(groundLine)[0]:  #Проверка на землю
         currentY = canvas.coords(groundLine)[1] - 47
-        velocity = 0
+        velocityOfJump = 0
         isJumping = False
         if sightSide in ['pyimage3', 'pyimage7', 'pyimage9', 'pyimage11']:
             canvas.itemconfig(mario, image=marioPhoto)
@@ -109,7 +109,7 @@ def updateJump(currentY):
 
 def checkCoords():
     '''Проверка координат персонажа на коллизии'''
-    global velocity, speed, processOfMoving, processOfCheckCoords, isOnground, isJumping, countOfMoney, centerOfAbyss1, leftSideOfAbyss1
+    global velocityOfJump, speed, processOfMoving, processOfCheckCoords, isOnground, isJumping, countOfMoney, centerOfAbyss1, leftSideOfAbyss1
     currentCoords = convertCoords(canvas.coords(mario), [90, 90])
     mushroomCoords = convertCoords(canvas.coords(coordsOfObjects[3][0]), [90, 90])
     turtleCoords = convertCoords(canvas.coords(coordsOfObjects[4][0]), [90, 90])
@@ -120,7 +120,7 @@ def checkCoords():
 
     #Проверка на столкновение с грибом
     if mushroomCoords and overlaps(*currentCoords, *mushroomCoords) and canvas.itemcget(coordsOfObjects[3][0], "state") != 'hidden':
-        if currentCoords[3] - 5 <= mushroomCoords[1] and velocity > 0:
+        if currentCoords[3] - 5 <= mushroomCoords[1] and velocityOfJump > 0:
             canvas.itemconfig(coordsOfObjects[3][0], state='hidden')
             countOfMoney.configure(text=str(int(countOfMoney.cget('text')) + 1))
         else:
@@ -129,7 +129,7 @@ def checkCoords():
     
     #Проверка на столкновение с черепахой
     if turtleCoords and overlaps(*currentCoords, *turtleCoords) and canvas.itemcget(coordsOfObjects[4][0], "state") != 'hidden':
-        if currentCoords[3] - 5 <= turtleCoords[1] and velocity > 0:
+        if currentCoords[3] - 5 <= turtleCoords[1] and velocityOfJump > 0:
             if canvas.itemcget(coordsOfObjects[4][0], "image") == 'pyimage18':
                 canvas.itemconfig(coordsOfObjects[4][0], image=shellPhoto)
                 canvas.coords(coordsOfObjects[4][0], canvas.coords(coordsOfObjects[4][0])[0], canvas.coords(coordsOfObjects[4][0])[1])
@@ -151,7 +151,9 @@ def checkCoords():
     #Проверка на левую границу экрана
     if canvas.coords(mario)[0] < 30:
         canvas.coords(mario, 30, canvas.coords(mario)[1])
-    if abs(canvas.coords(mario)[0] - centerOfAbyss1) < (centerOfAbyss1 - leftSideOfAbyss1) / 2 and canvas.coords(mario)[1] > 690:  #Проверка на бездну
+
+    #Проверка на бездну
+    if abs(canvas.coords(mario)[0] - centerOfAbyss1) < (centerOfAbyss1 - leftSideOfAbyss1) / 2 and canvas.coords(mario)[1] > 690:
         if canvas.coords(mario)[1] > 700:
             speed = 0
             isJumping = True
@@ -354,6 +356,7 @@ isMoving = False
 isOnground = True
 goingLeft = True
 velocity = 0
+velocityOfJump = 0
 gravity = 200
 directionX = 0
 directionMoving = 0
