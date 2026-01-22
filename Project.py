@@ -34,7 +34,10 @@ def startMove():
 def startJump():
     global isJumping, velocity, sightSide
     isJumping = True
-    velocity = -50
+    if canvas.coords(mario)[1] == 693:
+        velocity = -30
+    else:
+        velocity = -35
     sightSide = canvas.itemcget(mario, "image")
     if sightSide in ['pyimage3', 'pyimage7', 'pyimage9', 'pyimage11']:
         canvas.itemconfig(mario, image=marioJumpPhoto)
@@ -73,7 +76,7 @@ def move():
 
 def jump():
     '''Прыжок'''
-    global targetY, velocity
+    global velocity
     currentY = canvas.coords(mario)[1]
     updateJump(currentY)
     if velocity != 0:
@@ -92,7 +95,7 @@ def updateMove(directionX, currentX):
 def updateJump(currentY):
     '''Анимация прыжка'''
     global isJumping, velocity, sightSide
-    velocity += gravity * 0.016 - 1
+    velocity += gravity * 0.016 - 2
     currentY += velocity
     if currentY + 47 > canvas.coords(groundLine)[1] and canvas.coords(mario)[0] < canvas.coords(groundLine)[2] and canvas.coords(mario)[0] > canvas.coords(groundLine)[0]:  #Проверка на землю
         currentY = canvas.coords(groundLine)[1] - 47
@@ -114,6 +117,8 @@ def checkCoords():
     leftSideOfAbyss1 = coordsOfObjects[2][1][0]
     rightSideOfAbyss1 = coordsOfObjects[2][1][2]
     centerOfAbyss1 = (leftSideOfAbyss1 + rightSideOfAbyss1) // 2
+
+    #Проверка на столкновение с грибом
     if mushroomCoords and overlaps(*currentCoords, *mushroomCoords) and canvas.itemcget(coordsOfObjects[3][0], "state") != 'hidden':
         if currentCoords[3] - 5 <= mushroomCoords[1] and velocity > 0:
             canvas.itemconfig(coordsOfObjects[3][0], state='hidden')
@@ -121,6 +126,8 @@ def checkCoords():
         else:
             gameOver()
             canvas.itemconfig(mario, image=moneyPhoto)
+    
+    #Проверка на столкновение с черепахой
     if turtleCoords and overlaps(*currentCoords, *turtleCoords) and canvas.itemcget(coordsOfObjects[4][0], "state") != 'hidden':
         if currentCoords[3] - 5 <= turtleCoords[1] and velocity > 0:
             if canvas.itemcget(coordsOfObjects[4][0], "image") == 'pyimage18':
@@ -135,10 +142,14 @@ def checkCoords():
             canvas.itemconfig(mario, image=moneyPhoto)
         else:
             canvas.coords(mario, canvas.coords(coordsOfObjects[4][0])[0] - 100 * directionX, canvas.coords(mario)[1])
-    if canvas.coords(mario)[0] > window.winfo_screenwidth():   #Проверка на правую границу экрана
+
+    #Проверка на правую границу экрана
+    if canvas.coords(mario)[0] > window.winfo_screenwidth():
         canvas.coords(mario, 30, canvas.coords(mario)[1])
         resetEnvironment()
-    if canvas.coords(mario)[0] < 30:   #Проверка на левую границу экрана
+
+    #Проверка на левую границу экрана
+    if canvas.coords(mario)[0] < 30:
         canvas.coords(mario, 30, canvas.coords(mario)[1])
     if abs(canvas.coords(mario)[0] - centerOfAbyss1) < (centerOfAbyss1 - leftSideOfAbyss1) / 2 and canvas.coords(mario)[1] > 690:  #Проверка на бездну
         if canvas.coords(mario)[1] > 700:
@@ -147,11 +158,15 @@ def checkCoords():
         falling(mario, *canvas.coords(mario))
         if canvas.coords(mario)[1] > screenHeight:
             gameOver()
-    for i in range(2):   #Проверка на столкновение с трубами
-        if abs(coordsOfObjects[i][1][0] - canvas.coords(mario)[0]) < 100 and abs(coordsOfObjects[i][1][0] - canvas.coords(mario)[0]) > 75  and canvas.coords(mario)[1] > convertCoords(canvas.coords(coordsOfObjects[i][0]), [tubePhotos[i].width(), tubePhotos[i].height()])[3] - 100:
+
+    #Проверка на столкновение с трубами
+    for i in range(2):
+        if abs(coordsOfObjects[i][1][0] - canvas.coords(mario)[0]) < 100 and abs(coordsOfObjects[i][1][0] - canvas.coords(mario)[0]) > 75  and canvas.coords(mario)[1] > convertCoords(canvas.coords(coordsOfObjects[i][0]), [tubePhotos[i].width(), tubePhotos[i].height()])[3]:
             canvas.coords(mario, (coordsOfObjects[i][1][0] + (canvas.coords(mario)[0] - coordsOfObjects[i][1][0]) - 15 * directionX), canvas.coords(mario)[1])
-        elif abs(coordsOfObjects[i][1][0] - canvas.coords(mario)[0]) < 70 and canvas.coords(mario)[1] > convertCoords(canvas.coords(coordsOfObjects[i][0]), [tubePhotos[i].width(), tubePhotos[i].height()])[3] - 100:
+        elif abs(coordsOfObjects[i][1][0] - canvas.coords(mario)[0]) < 70 and canvas.coords(mario)[1] > convertCoords(canvas.coords(coordsOfObjects[i][0]), [tubePhotos[i].width(), tubePhotos[i].height()])[3]:
             canvas.coords(mario, coordsOfObjects[i][1][0], canvas.coords(mario)[1])
+
+    #Проверка на последнюю локацию
     if countOfLocations == 6:
         window.after_cancel(processOfMoving)
         if abs(canvas.coords(mario)[0] - 1800) < 50:
@@ -221,10 +236,14 @@ def createMushroom():
 def createTurtle():
     '''Создание врага-черепахи'''
     global coordsOfObjects
-    turtle = canvas.create_image(random.randint(1800, 1850), screenHeight // 2 + 153, image=turtlePhoto)
-    coordsOfObjects.append([turtle, canvas.coords(turtle)])
-    if random.randint(1, 2) == 1:
-        canvas.itemconfigure(turtle, state='hidden')
+    positionOfTurtle = random.randrange(400, 1500, 50)
+    if all(abs(positionOfTurtle - coordsOfObjects[i][1][0]) > 100 for i in range(4)):
+        turtle = canvas.create_image(positionOfTurtle, screenHeight // 2 + 153, image=turtlePhoto)
+        coordsOfObjects.append([turtle, canvas.coords(turtle)])
+        if random.randint(1, 2) == 1:
+            canvas.itemconfigure(turtle, state='hidden')
+    else:
+        createTurtle()
 
 def createEnemies():
     '''Создание врагов'''
