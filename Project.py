@@ -92,7 +92,7 @@ def updateMove(directionX, currentX):
 def updateJump(currentY):
     '''Анимация прыжка'''
     global isJumping, velocity, sightSide
-    velocity += gravity * 0.016 - 0.5
+    velocity += gravity * 0.016 - 1
     currentY += velocity
     if currentY + 47 > canvas.coords(groundLine)[1] and canvas.coords(mario)[0] < canvas.coords(groundLine)[2] and canvas.coords(mario)[0] > canvas.coords(groundLine)[0]:  #Проверка на землю
         currentY = canvas.coords(groundLine)[1] - 47
@@ -106,7 +106,7 @@ def updateJump(currentY):
 
 def checkCoords():
     '''Проверка координат персонажа на коллизии'''
-    global velocity, speed, processOfMoving, processOfCheckCoords, isOnground, isJumping, countOfMoney
+    global velocity, speed, processOfMoving, processOfCheckCoords, isOnground, isJumping, countOfMoney, centerOfAbyss1, leftSideOfAbyss1
     currentCoords = convertCoords(canvas.coords(mario), [90, 90])
     mushroomCoords = convertCoords(canvas.coords(coordsOfObjects[3][0]), [90, 90])
     turtleCoords = convertCoords(canvas.coords(coordsOfObjects[4][0]), [90, 90])
@@ -126,7 +126,7 @@ def checkCoords():
             if canvas.itemcget(coordsOfObjects[4][0], "image") == 'pyimage18':
                 canvas.itemconfig(coordsOfObjects[4][0], image=shellPhoto)
                 canvas.coords(coordsOfObjects[4][0], canvas.coords(coordsOfObjects[4][0])[0], canvas.coords(coordsOfObjects[4][0])[1])
-                canvas.coords(mario, turtleCoords[0] - 50, turtleCoords[1])
+                startJump()
             else:
                 canvas.itemconfig(coordsOfObjects[4][0], state='hidden')
                 countOfMoney.configure(text=str(int(countOfMoney.cget('text')) + 1))
@@ -144,7 +144,7 @@ def checkCoords():
         if canvas.coords(mario)[1] > 700:
             speed = 0
             isJumping = True
-        falling()
+        falling(mario, *canvas.coords(mario))
         if canvas.coords(mario)[1] > screenHeight:
             gameOver()
     for i in range(2):   #Проверка на столкновение с трубами
@@ -161,11 +161,11 @@ def checkCoords():
             speed = 0
     processOfCheckCoords = window.after(16, checkCoords)
 
-def falling():
+def falling(object, positionX, positionY):
     '''Падение'''
     global velocity
     velocity += gravity * 0.016
-    canvas.coords(mario, canvas.coords(mario)[0], canvas.coords(mario)[1] + velocity)
+    canvas.coords(object, positionX, positionY + velocity)
 
 def resetEnvironment():
     '''Обновление окружения при выходе за границы экрана'''
@@ -191,37 +191,50 @@ def resetEnvironment():
 
 def movingOfEnemies():
     '''Движение врагов'''
-    global directionMoving, goingLeft, processOfMoving, speedEnemy
+    global directionMoving, goingLeft, processOfMoving, speedEnemy, centerOfAbyss1, leftSideOfAbyss1
     currentMoving = canvas.coords(coordsOfObjects[3][0])[0]
-    if currentMoving >= 300 and goingLeft:
+    if abs(currentMoving - centerOfAbyss1) + 10 < (centerOfAbyss1 - leftSideOfAbyss1) / 2 and coordsOfObjects[3][1][1] > 690:  #Проверка на бездну
+        speedEnemy = 0
+        falling(coordsOfObjects[3][0], coordsOfObjects[3][1][0], coordsOfObjects[3][1][1])
+    if currentMoving >= positionOfMushroom - 50 and goingLeft:
         directionMoving = -1
-        if currentMoving < 310:
+        if currentMoving < positionOfMushroom - 40:
             goingLeft = False
-    elif currentMoving <= 500:
+    elif currentMoving <= positionOfMushroom + 50:
         directionMoving = 1
-        if currentMoving > 490:
+        if currentMoving > positionOfMushroom + 40:
             goingLeft = True
     currentMoving += directionMoving * speedEnemy
     canvas.coords(coordsOfObjects[3][0], currentMoving, canvas.coords(coordsOfObjects[3][0])[1])
     processOfMoving = window.after(16, movingOfEnemies)
 
+def createMushroom():
+    '''Создание врага-гриба'''
+    global coordsOfObjects, positionOfMushroom
+    positionOfMushroom = random.randrange(400, 1500, 75)
+    if all(abs(positionOfMushroom - coordsOfObjects[i][1][0]) > 100 for i in range(3)):
+        mushroom = canvas.create_image(positionOfMushroom, screenHeight // 2 + 153, image=mushroomPhoto)
+        coordsOfObjects.append([mushroom, canvas.coords(mushroom)])
+    else:
+        createMushroom()
+
+def createTurtle():
+    '''Создание врага-черепахи'''
+    global coordsOfObjects
+    turtle = canvas.create_image(random.randint(1800, 1850), screenHeight // 2 + 153, image=turtlePhoto)
+    coordsOfObjects.append([turtle, canvas.coords(turtle)])
+    if random.randint(1, 2) == 1:
+        canvas.itemconfigure(turtle, state='hidden')
+
 def createEnemies():
     '''Создание врагов'''
-    global coordsOfObjects
-    mushroom = canvas.create_image(random.randrange(350, 550, 50), screenHeight // 2 + 153, image=mushroomPhoto)
-    turtle = canvas.create_image(random.randint(1800, 1850), screenHeight // 2 + 153, image=turtlePhoto)
-    coordsOfObjects.append([mushroom, canvas.coords(mushroom)])
-    coordsOfObjects.append([turtle, canvas.coords(turtle)])
-    randomNumber = random.randint(1, 4)
-    if randomNumber == 1:
-        canvas.itemconfigure(turtle, state='hidden')
-    elif randomNumber == 2:
-        canvas.itemconfigure(mushroom, state='hidden')    
+    createMushroom()
+    createTurtle()
 
 def createAbysses():
     '''Создание бездн'''
     global coordsOfObjects
-    positionX0 = random.randrange(800, 1600, 50)
+    positionX0 = random.randrange(400, 1600, 50)
     if all(abs(positionX0 - coordsOfObjects[i][1][0]) > 230 for i in range(2)):
         position = [positionX0, screenHeight // 2 + 195, positionX0 + random.randint(100, 200), screenHeight]
         abyss = canvas.create_rectangle(position, fill='lightblue', outline='')
@@ -236,7 +249,7 @@ def createTubes():
     for i in range(2):
         tubePhoto = ImageTk.PhotoImage(Image.open('tube.png').resize((130, random.randrange(100, 301, 50))))
         tubePhotos.append(tubePhoto)
-        tube = canvas.create_image(random.randrange(800, 1600, 300), canvas.coords(groundLine)[1], image=tubePhotos[i])
+        tube = canvas.create_image(random.randrange(400, 1600, 300), canvas.coords(groundLine)[1], image=tubePhotos[i])
         canvas.coords(tube, canvas.coords(tube)[0], convertCoords(canvas.coords(tube), [tubePhotos[i].width(), tubePhotos[i].height()])[3])
         coordsOfObjects.append([tube, canvas.coords(tube)])
         if i == 1:
