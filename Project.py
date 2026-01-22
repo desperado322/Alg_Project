@@ -34,7 +34,7 @@ def startMove():
 def startJump():
     global isJumping, velocity, sightSide
     isJumping = True
-    velocity = -35
+    velocity = -50
     sightSide = canvas.itemcget(mario, "image")
     if sightSide in ['pyimage3', 'pyimage7', 'pyimage9', 'pyimage11']:
         canvas.itemconfig(mario, image=marioJumpPhoto)
@@ -106,11 +106,10 @@ def updateJump(currentY):
 
 def checkCoords():
     '''Проверка координат персонажа на коллизии'''
-    global velocity, speed, processOfMoving, processOfCheckCoords, isOnground, isOnTube
+    global velocity, speed, processOfMoving, processOfCheckCoords, isOnground, isJumping 
     currentCoords = convertCoords(canvas.coords(mario), [90, 90])
     mushroomCoords = convertCoords(canvas.coords(coordsOfObjects[3][0]), [90, 90])
     turtleCoords = convertCoords(canvas.coords(coordsOfObjects[4][0]), [90, 90])
-
     #Координаты бездн
     leftSideOfAbyss1 = coordsOfObjects[2][1][0]
     rightSideOfAbyss1 = coordsOfObjects[2][1][2]
@@ -120,6 +119,21 @@ def checkCoords():
             canvas.itemconfig(coordsOfObjects[3][0], state='hidden')
         else:
             gameOver()
+            canvas.itemconfig(mario, image=moneyPhoto)
+    if turtleCoords and overlaps(*currentCoords, *turtleCoords) and canvas.itemcget(coordsOfObjects[4][0], "state") != 'hidden':
+        if currentCoords[3] - 5 <= turtleCoords[1] and velocity > 0:
+            canvas.coords(mario, canvas.coords(mario)[0], 705)
+            if canvas.itemcget(coordsOfObjects[4][0], "image") == 'pyimage17':
+                canvas.itemconfig(coordsOfObjects[4][0], image=shellPhoto)
+                canvas.coords(coordsOfObjects[4][0], canvas.coords(coordsOfObjects[4][0])[0], canvas.coords(coordsOfObjects[4][0])[1])
+                canvas.coords(mario, turtleCoords[0] - 50, turtleCoords[1])
+            else:
+                canvas.itemconfig(coordsOfObjects[4][0], state='hidden')
+        elif canvas.itemcget(coordsOfObjects[4][0], "image") == 'pyimage17':
+            gameOver()
+            canvas.itemconfig(mario, image=moneyPhoto)
+        else:
+            canvas.coords(mario, canvas.coords(coordsOfObjects[4][0])[0] - 100 * directionX, canvas.coords(mario)[1])
     if canvas.coords(mario)[0] > window.winfo_screenwidth():   #Проверка на правую границу экрана
         canvas.coords(mario, 30, canvas.coords(mario)[1])
         resetEnvironment()
@@ -128,6 +142,7 @@ def checkCoords():
     if abs(canvas.coords(mario)[0] - centerOfAbyss1) < (centerOfAbyss1 - leftSideOfAbyss1) / 2 and canvas.coords(mario)[1] > 690:  #Проверка на бездну
         if canvas.coords(mario)[1] > 700:
             speed = 0
+            isJumping = True
         falling()
         if canvas.coords(mario)[1] > screenHeight:
             window.destroy()
@@ -147,9 +162,8 @@ def checkCoords():
 
 def falling():
     global velocity
-    velocity += gravity * 0.00016
+    velocity += gravity * 0.016
     canvas.coords(mario, canvas.coords(mario)[0], canvas.coords(mario)[1] + velocity)
-    window.after(16, falling)
 
 def resetEnvironment():
     '''Обновление окружения при выходе за границы экрана'''
@@ -160,12 +174,12 @@ def resetEnvironment():
     createTubes() #Создание новых препятствий
     canvas.tag_raise(ground)
     createAbysses() #Создание бездн
+    createEnemies()
 
-    if countOfLocations != 5:
-        createEnemies()
-    else:
+    if countOfLocations == 5:
         canvas.create_image(1800, screenHeight // 2 + 118, image=flagPhoto)
-        
+        canvas.itemconfig(coordsOfObjects[3][0], state='hidden')
+        canvas.itemconfig(coordsOfObjects[4][0], state='hidden')
     canvas.tag_raise(mario, coordsOfObjects[2][0])
     canvas.tag_lower(groundLine)
     for i in range(2):
@@ -194,7 +208,7 @@ def createEnemies():
     '''Создание врагов'''
     global coordsOfObjects
     mushroom = canvas.create_image(random.randrange(350, 550, 50), screenHeight // 2 + 153, image=mushroomPhoto)
-    turtle = canvas.create_image(random.randint(1800, 1900), screenHeight // 2 + 120, image=turtlePhoto)
+    turtle = canvas.create_image(random.randint(1700, 1700), screenHeight // 2 + 153, image=turtlePhoto)
     coordsOfObjects.append([mushroom, canvas.coords(mushroom)])
     coordsOfObjects.append([turtle, canvas.coords(turtle)])
     randomNumber = random.randint(1, 4)
@@ -295,7 +309,6 @@ processOfCheckCoords = None
 isJumping = False
 isMoving = False
 isOnground = True
-isOnTube = False
 goingLeft = True
 velocity = 0
 gravity = 200
@@ -362,6 +375,7 @@ createAbysses()
 #Создание врагов
 mushroomPhoto = ImageTk.PhotoImage(Image.open('mushroom.png').resize((90, 90)))
 turtlePhoto = ImageTk.PhotoImage(Image.open('turtle.png').resize((90, 90)).transpose(Image.FLIP_LEFT_RIGHT))
+shellPhoto = ImageTk.PhotoImage(Image.open('shell.png').resize((90, 90)))
 createEnemies()
 
 #Отрисовка поверх других объектов
